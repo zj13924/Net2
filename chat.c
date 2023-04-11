@@ -15,7 +15,7 @@
 #define BUF_SIZE_LONG 2048
 #define MAX_CLIENTS 10
 #define PORT_NO (u_short)20000
-#define Err(x)                \
+#define ErrorExit(x)          \
     {                         \
         fprintf(stderr, "-"); \
         perror(x);            \
@@ -25,7 +25,7 @@ int i, j, msgLength, inputLength, result;
 char buf[BUF_SIZE], inputBuf[BUF_SIZE], strBuf[BUF_SIZE_LONG], hostName[NAME_SIZE];
 struct sockaddr_in sockAddr;
 struct hostent *host;
-struct timeval time;
+struct timeval timeVal;
 fd_set mask;
 
 void startServer();
@@ -33,21 +33,19 @@ void startClient();
 
 int main()
 {
-    time.tv_sec = 0;
-    time.tv_usec = 1;
-    int role = 0;
+    timeVal.tv_sec = 0;
+    timeVal.tv_usec = 1;
     while (1)
     {
         printf("Please select your role.\n");
         printf("Server: 1 ; Client: 2 \n");
-        scanf("%d", &role);
-        printf("\n");
-        if (role == 1 || role == 2)
+        scanf("%s", inputBuf);
+        if (strcmp(inputBuf, "1") == 0 || strcmp(inputBuf, "2") == 0)
             break;
     }
-    if (role == 1)
+    if (strcmp(inputBuf, "1") == 0)
         startServer();
-    if (role == 2)
+    if (strcmp(inputBuf, "2") == 0)
         startClient();
 }
 
@@ -57,11 +55,11 @@ void startServer()
     bool hasNext;
     bzero(fdClientList, sizeof(int) * MAX_CLIENTS);
     if (gethostname(hostName, sizeof(hostName)) < 0)
-        Err("gethostname");
+        ErrorExit("gethostname");
     printf("Your hostname is '%s'\n", hostName);
     host = gethostbyname(hostName);
     if (host == NULL)
-        Err("gethostbyname");
+        ErrorExit("gethostbyname");
     bzero((char *)&sockAddr, sizeof(sockAddr));
     sockAddr.sin_family = AF_INET;
     sockAddr.sin_port = htons(PORT_NO);
@@ -69,9 +67,9 @@ void startServer()
           (char *)&sockAddr.sin_addr, host->h_length);
     fdToListen = socket(AF_INET, SOCK_STREAM, 0);
     if (fdToListen < 0)
-        Err("socket");
+        ErrorExit("socket");
     if (bind(fdToListen, (struct sockaddr *)&sockAddr, sizeof(sockAddr)) < 0)
-        Err("bind");
+        ErrorExit("bind");
     listen(fdToListen, 1);
     write(1, "Waiting for someone to connect...\n", 34);
 
@@ -92,16 +90,16 @@ void startServer()
                 fdMax = fd;
         }
 
-        result = select(fdMax + 1, &mask, NULL, NULL, &time);
+        result = select(fdMax + 1, &mask, NULL, NULL, &timeVal);
         if (result < 0)
-            Err("select");
+            ErrorExit("select");
 
-        // A client called connect()
+        // A new client called connect()
         if (FD_ISSET(fdToListen, &mask))
         {
             fd = accept(fdToListen, NULL, NULL);
             if (fd < 0)
-                Err("accept");
+                ErrorExit("accept");
             for (i = 0; i < MAX_CLIENTS; i++)
             {
                 if (fdClientList[i] == 0)
@@ -117,10 +115,10 @@ void startServer()
         inputLength = 0;
         if (FD_ISSET(0, &mask))
         {
-            bzero(inputBuf, BUF_SIZE);
+            bzero(inputBuf, sizeof(char) * BUF_SIZE);
             inputLength = read(0, inputBuf, BUF_SIZE);
             // "Quit" command input
-            if (!strcmp(inputBuf, "Q\n") || inputLength == 0)
+            if (strcmp(inputBuf, "Q\n") == 0 || inputLength == 0)
             {
                 strcpy(inputBuf, "Q\n");
                 hasNext = false;
@@ -136,17 +134,20 @@ void startServer()
             // If the input message is not empty, send it to the current client
             if (inputLength > 0)
             {
-                bzero(strBuf, BUF_SIZE_LONG);
-                sprintf(strBuf, "server: %s", inputBuf);
+                bzero(strBuf, sizeof(char) * BUF_SIZE_LONG);
+                if (strcmp(inputBuf, "Q\n") == 0)
+                    strcpy(strBuf, inputBuf);
+                else
+                    sprintf(strBuf, "server: %s", inputBuf);
                 write(fd, strBuf, strlen(strBuf));
             }
             // Message received from the current client
             if (FD_ISSET(fd, &mask))
             {
-                bzero(buf, BUF_SIZE);
+                bzero(buf, sizeof(char) * BUF_SIZE);
                 msgLength = read(fd, buf, BUF_SIZE);
                 // "Quit" command received
-                if (!strcmp(buf, "Q\n") || msgLength == 0)
+                if (strcmp(buf, "Q\n") == 0 || msgLength == 0)
                 {
                     close(fd);
                     fdClientList[i] = 0;
@@ -154,7 +155,7 @@ void startServer()
                     continue;
                 }
 
-                bzero(strBuf, BUF_SIZE_LONG);
+                bzero(strBuf, sizeof(char) * BUF_SIZE_LONG);
                 sprintf(strBuf, "client[%02d]: %s", i, buf);
                 // Print the received message (fd=1 means standard output)
                 write(1, strBuf, strlen(strBuf));
@@ -170,9 +171,7 @@ void startServer()
             }
         }
         if (!hasNext)
-        {
             break;
-        }
     }
 
     for (i = 0; i < MAX_CLIENTS; i++)
@@ -191,7 +190,7 @@ void startClient()
     scanf("%s", hostName);
     host = gethostbyname(hostName);
     if (host == NULL)
-        Err("gethostbyname");
+        ErrorExit("gethostbyname");
     bzero((char *)&sockAddr, sizeof(sockAddr));
     sockAddr.sin_family = AF_INET;
     sockAddr.sin_port = htons(PORT_NO);
@@ -199,7 +198,7 @@ void startClient()
           (char *)&sockAddr.sin_addr, host->h_length);
     fdToConnect = socket(AF_INET, SOCK_STREAM, 0);
     if (fdToConnect < 0)
-        Err("socket");
+        ErrorExit("socket");
     connect(fdToConnect, (struct sockaddr *)&sockAddr, sizeof(sockAddr));
     write(1, "Please wait until someone sends a message...\n", 45);
 
@@ -208,16 +207,16 @@ void startClient()
         FD_ZERO(&mask);
         FD_SET(fdToConnect, &mask);
         FD_SET(0, &mask);
-        result = select(fdToConnect + 1, &mask, NULL, NULL, &time);
+        result = select(fdToConnect + 1, &mask, NULL, NULL, &timeVal);
         if (result < 0)
-            Err("select");
+            ErrorExit("select");
         // Message received from server
         if (FD_ISSET(fdToConnect, &mask))
         {
-            bzero(buf, BUF_SIZE);
+            bzero(buf, sizeof(char) * BUF_SIZE);
             msgLength = read(fdToConnect, buf, BUF_SIZE);
             // "Quit" command received
-            if (!strcmp(buf, "Q\n") || msgLength == 0)
+            if (strcmp(buf, "Q\n") == 0 || msgLength == 0)
                 break;
             // Print the received message (fd=1 means standard output)
             write(1, buf, msgLength);
@@ -225,12 +224,12 @@ void startClient()
         // Message input via stdio (fd=0 means standard input)
         if (FD_ISSET(0, &mask))
         {
-            bzero(inputBuf, BUF_SIZE);
+            bzero(inputBuf, sizeof(char) * BUF_SIZE);
             inputLength = read(0, inputBuf, BUF_SIZE);
             // Send the message to server
             write(fdToConnect, inputBuf, inputLength);
             // "Quit" command input
-            if (!strcmp(inputBuf, "Q\n") || inputLength == 0)
+            if (strcmp(inputBuf, "Q\n") == 0 || inputLength == 0)
                 break;
         }
     }
