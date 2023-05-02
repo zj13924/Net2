@@ -45,7 +45,7 @@ int main()
     }
     if (strcmp(inputBuf, "1") == 0)
         startServer();
-    if (strcmp(inputBuf, "2") == 0)
+    else if (strcmp(inputBuf, "2") == 0)
         startClient();
 }
 
@@ -68,6 +68,8 @@ void startServer()
     fdToListen = socket(AF_INET, SOCK_STREAM, 0);
     if (fdToListen < 0)
         ErrorExit("socket");
+    int option = 1;
+    setsockopt(fdToListen, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
     if (bind(fdToListen, (struct sockaddr *)&sockAddr, sizeof(sockAddr)) < 0)
         ErrorExit("bind");
     listen(fdToListen, 1);
@@ -199,6 +201,8 @@ void startClient()
     fdToConnect = socket(AF_INET, SOCK_STREAM, 0);
     if (fdToConnect < 0)
         ErrorExit("socket");
+    int option = 1;
+    setsockopt(fdToConnect, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
     connect(fdToConnect, (struct sockaddr *)&sockAddr, sizeof(sockAddr));
     write(1, "Please wait until someone sends a message...\n", 45);
 
