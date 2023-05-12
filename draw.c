@@ -27,11 +27,11 @@ struct Stroke
     XPoint p0;
     XPoint p1;
     unsigned long color;
+    char *message;
     bool en;
     struct Stroke *next;
 };
 
-struct Stroke currentStroke;
 int i, j, msgLength, inputLength, result;
 char inputBuf[BUF_SIZE];
 struct timeval timeVal;
@@ -48,6 +48,7 @@ void createWindow(int, int, char *);
 void onEvent();
 void parseCommand(char *);
 unsigned long parseColor(char *);
+void queryColor(unsigned long, int *, int *, int *);
 void startPainter();
 
 int main(int argc, char *argv[])
@@ -125,6 +126,19 @@ void parseCommand(char *input)
             unsigned long colorVal = parseColor(param);
             XSetForeground(display, gc, colorVal);
         }
+        case 'D':
+        case 'd':
+        {
+            int x0, y0, x1, y1;
+            char color[BUF_SIZE];
+            bzero(color, BUF_SIZE);
+            if (sscanf(param, "%d-%d-%d-%d-%s", &x0, &y0, &x1, &y1, color) >= 4)
+            {
+                unsigned long colorVal = parseColor(color);
+                XSetForeground(display, gc, colorVal);
+                XDrawLine(display, window, gc, x0, y0, x1, y1);
+            }
+        }
         break;
         default:
             printf("%s: Invalid command!\n", input);
@@ -139,28 +153,43 @@ void parseCommand(char *input)
 
 unsigned long parseColor(char *colorHex)
 {
-    int r = 0, g = 0, b = 0;
+    int sr, sg, sb, r = 0, g = 0, b = 0;
     unsigned long colorVal;
     char colorBuf[16];
     if (sscanf(colorHex, "%lx", &colorVal) == 1)
     {
-        if (strlen(colorHex) == 3)
+        if (strlen(colorHex) == 3 &&
+            sscanf(colorHex, "%1x%1x%1x", &sr, &sg, &sb) == 3)
         {
-            sscanf(colorHex, "%1x%1x%1x", &r, &g, &b);
-            r += r * 16;
-            g += g * 16;
-            b += b * 16;
+            r = sr + sr * 16;
+            g = sg + sg * 16;
+            b = sb + sb * 16;
         }
-        else if (strlen(colorHex) >= 6)
-            sscanf(colorHex, "%02x%02x%02x", &r, &g, &b);
+        else if (strlen(colorHex) >= 6 &&
+                 sscanf(colorHex, "%02x%02x%02x", &sr, &sg, &sb) == 3)
+        {
+            r = sr;
+            g = sg;
+            b = sb;
+        }
     }
     sprintf(colorBuf, "rgb:%02x/%02x/%02x", r, g, b);
     XColor scrColor, exactColor;
     XAllocNamedColor(display, DefaultColormap(display, DefaultScreen(display)),
                      colorBuf, &scrColor, &exactColor);
-    printf("\33[48;2;%d;%d;%dm          ", r, g, b);
-    printf("\33[0m\n");
+    printf("\033[48;2;%d;%d;%dm          ", r, g, b);
+    printf("\033[0m\n");
     return scrColor.pixel;
+}
+
+void queryColor(unsigned long color, int *r, int *g, int *b)
+{
+    XColor xColor;
+    xColor.pixel = color;
+    XQueryColor(display, DefaultColormap(display, DefaultScreen(display)), &xColor);
+    *r = xColor.red / 256;
+    *g = xColor.green / 256;
+    *b = xColor.blue / 256;
 }
 
 void startPainter()

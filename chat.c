@@ -21,6 +21,17 @@
         perror(x);            \
         exit(0);              \
     }
+
+struct Participant
+{
+    char *name;
+    char *ip;
+    int fd;
+    unsigned long color;
+    bool active;
+    struct Participant *next;
+};
+
 int i, j, msgLength, inputLength, result;
 char buf[BUF_SIZE], inputBuf[BUF_SIZE], strBuf[BUF_SIZE_LONG], hostName[NAME_SIZE];
 struct sockaddr_in sockAddr;
@@ -56,7 +67,6 @@ void startServer()
     bzero(fdClientList, sizeof(int) * MAX_CLIENTS);
     if (gethostname(hostName, sizeof(hostName)) < 0)
         ErrorExit("gethostname");
-    printf("Your hostname is '%s'\n", hostName);
     host = gethostbyname(hostName);
     if (host == NULL)
         ErrorExit("gethostbyname");
@@ -73,7 +83,12 @@ void startServer()
     if (bind(fdToListen, (struct sockaddr *)&sockAddr, sizeof(sockAddr)) < 0)
         ErrorExit("bind");
     listen(fdToListen, 1);
-    write(1, "Waiting for someone to connect...\n", 34);
+
+    char *ipBuf = (char *)calloc(INET_ADDRSTRLEN + 1, sizeof(char));
+    if (inet_ntop(AF_INET, host->h_addr, ipBuf, INET_ADDRSTRLEN) == NULL)
+        ErrorExit("inet_ntop");
+    printf("Your hostname and IPv4 address is '%s', %s\n", hostName, ipBuf);
+    printf("Waiting for someone to connect...\n");
 
     while (1)
     {
@@ -188,16 +203,32 @@ void startServer()
 void startClient()
 {
     int fdToConnect;
-    printf("Please enter the server's hostname:\n");
-    scanf("%s", hostName);
-    host = gethostbyname(hostName);
-    if (host == NULL)
-        ErrorExit("gethostbyname");
+    unsigned char ip[4];
     bzero((char *)&sockAddr, sizeof(sockAddr));
     sockAddr.sin_family = AF_INET;
     sockAddr.sin_port = htons(PORT_NO);
-    bcopy((char *)host->h_addr,
-          (char *)&sockAddr.sin_addr, host->h_length);
+
+    printf("Please enter the server's hostname or IPv4 address:\n");
+    scanf("%s", hostName);
+    if (sscanf(hostName, "%hhu.%hhu.%hhu.%hhu", &ip[0], &ip[1], &ip[2], &ip[3]) == 4)
+    {
+        char ipStr[20];
+        struct in_addr serverAddr;
+        sprintf(ipStr, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+        if (inet_aton(ipStr, &serverAddr) == 0)
+            ErrorExit("inet_aton");
+        bcopy((char *)&serverAddr,
+              (char *)&sockAddr.sin_addr, 4);
+    }
+    else
+    {
+        host = gethostbyname(hostName);
+        if (host == NULL)
+            ErrorExit("gethostbyname");
+        bcopy((char *)host->h_addr,
+              (char *)&sockAddr.sin_addr, host->h_length);
+    }
+
     fdToConnect = socket(AF_INET, SOCK_STREAM, 0);
     if (fdToConnect < 0)
         ErrorExit("socket");
