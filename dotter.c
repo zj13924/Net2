@@ -45,7 +45,6 @@ Window window;
 Colormap colormap;
 GC gc;
 XEvent event;
-
 Pixmap tile[3];
 
 void createWindow(int, int, char *);
@@ -61,7 +60,7 @@ int main(int argc, char *argv[])
     // Set the blocking time for select()
     timeVal.tv_sec = 0;
     timeVal.tv_usec = 10;
-    createWindow(400, 400, "Tic-Tac-Toe");
+    createWindow(GRID_SIZE * BOARD_SIZE, GRID_SIZE * BOARD_SIZE, "Tic-Tac-Toe");
 
     while (1)
     {
@@ -116,9 +115,6 @@ void createWindow(int left, int top, char *title)
     XMapWindow(display, window);
     gc = XCreateGC(display, DefaultRootWindow(display), 0, 0);
 
-    tile[0] = XCreatePixmap(display, window, GRID_SIZE, GRID_SIZE, DefaultDepth(display, DefaultScreen(display)));
-    tile[1] = XCreatePixmap(display, window, GRID_SIZE, GRID_SIZE, DefaultDepth(display, DefaultScreen(display)));
-    tile[2] = XCreatePixmap(display, window, GRID_SIZE, GRID_SIZE, DefaultDepth(display, DefaultScreen(display)));
     XpmCreatePixmapFromData(display, window, none, &tile[0], NULL, NULL);
     XpmCreatePixmapFromData(display, window, circle, &tile[1], NULL, NULL);
     XpmCreatePixmapFromData(display, window, cross, &tile[2], NULL, NULL);
@@ -148,7 +144,7 @@ void onEvent()
 
 bool placeStone(int x, int y)
 {
-    if (x > -1 && x < 16 && y > -1 && y < 16 && board[y][x] == NONE)
+    if (x > -1 && x < BOARD_SIZE && y > -1 && y < BOARD_SIZE && board[y][x] == NONE)
     {
         board[y][x] = currentColor;
         drawBoard();
