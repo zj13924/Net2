@@ -21,7 +21,6 @@
 #define CROSS 2
 #define BOARD_SIZE 3
 #define GRID_SIZE 100
-#define STONE_RADIUS 13
 #define BUF_SIZE 1024
 #define PROTOCOL_DELIMITER "-\n"
 #define ErrorExit(x)          \
