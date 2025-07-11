@@ -16,9 +16,9 @@
 #include "none.xpm"
 #include "circle.xpm"
 #include "cross.xpm"
-#define NONE 0b00
-#define CIRCLE 0b01
-#define CROSS 0b10
+#define NONE 0
+#define CIRCLE 1
+#define CROSS 2
 #define BOARD_SIZE 3
 #define GRID_SIZE 100
 #define STONE_RADIUS 13
@@ -114,10 +114,9 @@ void createWindow(int left, int top, char *title)
     XSetNormalHints(display, window, &hints);
     XMapWindow(display, window);
     gc = XCreateGC(display, DefaultRootWindow(display), 0, 0);
-
-    XpmCreatePixmapFromData(display, window, none, &tile[0], NULL, NULL);
-    XpmCreatePixmapFromData(display, window, circle, &tile[1], NULL, NULL);
-    XpmCreatePixmapFromData(display, window, cross, &tile[2], NULL, NULL);
+    XpmCreatePixmapFromData(display, window, none, &tile[NONE], NULL, NULL);
+    XpmCreatePixmapFromData(display, window, circle, &tile[CIRCLE], NULL, NULL);
+    XpmCreatePixmapFromData(display, window, cross, &tile[CROSS], NULL, NULL);
 }
 
 void onEvent()
@@ -165,13 +164,13 @@ void drawBoard()
             switch (board[y][x])
             {
             case CIRCLE:
-                XCopyArea(display, tile[1], window, gc, 0, 0, GRID_SIZE, GRID_SIZE, x * GRID_SIZE, y * GRID_SIZE);
+                XCopyArea(display, tile[CIRCLE], window, gc, 0, 0, GRID_SIZE, GRID_SIZE, x * GRID_SIZE, y * GRID_SIZE);
                 break;
             case CROSS:
-                XCopyArea(display, tile[2], window, gc, 0, 0, GRID_SIZE, GRID_SIZE, x * GRID_SIZE, y * GRID_SIZE);
+                XCopyArea(display, tile[CROSS], window, gc, 0, 0, GRID_SIZE, GRID_SIZE, x * GRID_SIZE, y * GRID_SIZE);
                 break;
             default:
-                XCopyArea(display, tile[0], window, gc, 0, 0, GRID_SIZE, GRID_SIZE, x * GRID_SIZE, y * GRID_SIZE);
+                XCopyArea(display, tile[NONE], window, gc, 0, 0, GRID_SIZE, GRID_SIZE, x * GRID_SIZE, y * GRID_SIZE);
                 break;
             }
         }
