@@ -1,7 +1,7 @@
 /*
-  Class 4I, 2025, NIT Ibaraki College
+  Class 4I, 2026, NIT Ibaraki College
   Computer Networks II sample code
-  Skeleton program of the "Tic-Tac-Toe" game
+  GUI Skeleton program for the "Tic-Tac-Toe" Web API Client
 */
 #include <sys/types.h>
 #include <stdio.h>
@@ -21,7 +21,7 @@
 #define CROSS 2
 #define BOARD_SIZE 3
 #define GRID_SIZE 100
-#define BUF_SIZE 1024
+#define BUF_SIZE 4096
 #define PROTOCOL_DELIMITER "-\n"
 #define ErrorExit(x)          \
     {                         \
@@ -30,14 +30,9 @@
         exit(0);              \
     }
 
-const char *PLACE = "PLACE";
-const char *NEW_COMMAND = "XYZ"; // STUB!
-
 unsigned char board[BOARD_SIZE][BOARD_SIZE] = {NONE};
 unsigned char currentColor = CIRCLE;
 char buf[BUF_SIZE];
-struct timeval timeVal;
-fd_set fdSet;
 
 Display *display;
 Window window;
@@ -46,43 +41,24 @@ GC gc;
 XEvent event;
 Pixmap tile[3];
 
-void createWindow(int, int, char *);
+void createWindow(int left, int top, char *title);
 void onEvent();
-bool placeStone(int, int);
+bool placeStone(int x, int y);
 void drawBoard();
-bool parseCommand(char *);
-bool checkResult(int, int);
+void sendMessage(char *message);
 
 int main(int argc, char *argv[])
 {
-    int result;
-    // Set the blocking time for select()
-    timeVal.tv_sec = 0;
-    timeVal.tv_usec = 10;
     createWindow(GRID_SIZE * BOARD_SIZE, GRID_SIZE * BOARD_SIZE, "Tic-Tac-Toe");
 
     while (1)
     {
         // Respond to window events
         onEvent();
-
-        // Initialize the fd_set and attach the target FDs to be supervised
-        FD_ZERO(&fdSet);
-        FD_SET(0, &fdSet);
-        result = select(0 + 1, &fdSet, NULL, NULL, &timeVal);
-        if (result < 0)
-            ErrorExit("select");
-
-        // When stdin is ready for read (fd = 0 means standard input)
-        if (FD_ISSET(0, &fdSet))
-        {
-            bzero(buf, sizeof(char) * BUF_SIZE);
-            // "Quit" command input
-            if (read(0, buf, BUF_SIZE) == 0 || strcmp(buf, "Q\n") == 0)
-                break;
-            else
-                parseCommand(buf);
-        }
+        // Initialize buffer and send message to server
+        bzero(buf, sizeof(char) * BUF_SIZE);
+        sprintf(buf, "GET http://api.islaytouch.com/ttt.php?board=%s&key=%s\r\n", "100000000", "2023000");
+        sendMessage(buf);
     }
 
     XDestroyWindow(display, window);
@@ -176,48 +152,11 @@ void drawBoard()
     }
 }
 
-bool parseCommand(char *cmd)
+void sendMessage(char *message)
 {
-    bool captured = false;
-    char *cmdDup = strdup(cmd);
-    char *cp = strtok(cmdDup, PROTOCOL_DELIMITER);
-    while (cp != NULL)
-    {
-        char *cmdName = cp;
-        cp = strtok(NULL, PROTOCOL_DELIMITER);
-        // PLACE-<XY>: place a stone of current color at <X,Y>
-        if (strcmp(cmdName, PLACE) == 0 && cp != NULL)
-        {
-            int position;
-            if (sscanf(cp, "%02x", &position) > 0 && strlen(cp) == 2)
-            {
-                int x = position / 16, y = position % 16;
-                if (!placeStone(x, y))
-                {
-                    // STUB!
-                }
-                else if (checkResult(x, y))
-                {
-                    // STUB!
-                }
-                captured = true;
-                break;
-            }
-        }
-        // Stub branch for a new command
-        else if (strcmp(cmdName, NEW_COMMAND) == 0)
-        {
-            // STUB!
-            captured = true;
-            break;
-        }
-    }
-    free(cmdDup);
-    return captured;
-}
-
-bool checkResult(int x, int y)
-{
+    // This function should send the message to the server and handle the response.
     // STUB!
-    return false;
+    // printf("Message to be sent: %s\n", message);
+    // STUB!
+    // printf("Message received from server: %s\n", "HTTP/1.1 200 OK\nContent-Type: text/plain\n\n{\"board\":[[1,0,0],[0,2,0],[0,0,0]]}");
 }
